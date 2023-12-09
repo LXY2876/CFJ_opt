@@ -154,13 +154,14 @@ if __name__=='__main__':
     result,F1,F2=nsga.main()
     v1=max(F1)
     v2=max(F2)
-    v1=1
-    v2=-1
+    baseline=PLANE([0,0,0,0]).get_raw()
+    v1=baseline[0]
+    v2=-1*baseline[1]
     index=0
     max_obj=0
-    baseline=PLANE([0,0,0,0]).get_raw()
-    F1=np.array(F1)/baseline[0]
-    F2=np.array(F2)/baseline[1]
+    
+    # F1=np.array(F1)/baseline[0]
+    # F2=np.array(F2)/baseline[1]
     for i in range(0,nsga.pop_size):
         if (F1[i]-v1)*(F2[i]-v2)>max_obj:
             max_obj=(F1[i]-v1)*(F2[i]-v2)
@@ -170,6 +171,7 @@ if __name__=='__main__':
 
     planes=[PLANE(x) for x in result]
     other_info=np.zeros([nsga.pop_size,3])
+    i=0
     for plane in planes:
         plane.update_aero()
         plane.update_G()
@@ -177,17 +179,18 @@ if __name__=='__main__':
         other_info[i][0]=plane.G1
         other_info[i][1]=plane.Duct.duct
         other_info[i][2]=plane.G1-plane.Duct.duct-plane.G0
+        i=i+1
     print("nash",result[index],F1[index],F2[index])
     plt.scatter(X,Y, marker='^',color='r') 
     
     plt.xlabel('Tof', fontsize=15)
     plt.ylabel('Curise', fontsize=15)
-    plt.scatter(F1, F2)
+    plt.scatter(F1, F2, marker='+',color='k')
     # plt.xlim(0, 1)
     # plt.ylim(-2, -1)
     dic1={"N":result[:,0],"W_D":result[:,1],"Cmiu_Tof":result[:,2],"Cmiu_Curise":result[:,3],"TofDistance":F1,"CuriseRange":F2,"总重":other_info[:,0],"管道重量":other_info[:,1],"电机重量":other_info[:,2]}
     df=pd.DataFrame(dic1)
-    df.to_excel("结果1.xlsx",sheet_name="sheet1",index=False)
+    df.to_excel("结果3.xlsx",sheet_name="sheet1",index=False)
     plt.show()
 
     # plane=PLANE([2.00037998 ,0.06   ,    0.19845694, 0.03937537])

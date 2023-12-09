@@ -3,11 +3,12 @@
 # Time:2023/03/11
  
 #Importing required modules
-import math
+from math import *
 import random
 import matplotlib.pyplot as plt
 import numpy as np
 import sys
+from numpy import pi
 #First function to optimize
 
 class NSGA2():
@@ -17,8 +18,8 @@ class NSGA2():
         self.min_x=[-55,-55]
         self.max_x=[55,55]
         self.flag=flag
-        self.pop_size=150
-        self.max_gen=120
+        self.pop_size=20
+        self.max_gen=50
         self.obj1=func1
         self.obj2=func2
         self.constraint=constraint
@@ -33,7 +34,20 @@ class NSGA2():
     #     return value
     
     #Function to find index of list,且是找到的第一个索引
-    
+    def first_population(self):
+        p=13
+        r=[]
+        solution=[]
+        s=len(self.bounds)
+        for k in range(1,s+1):
+            r.append(2*cos(2*pi*k/p))
+        r=np.array(r)
+        for k in range(1,self.pop_size+1):
+            P=(k*r)%1
+            for i in range(s):
+                P[i]=P[i]*(self.bounds[i][1]-self.bounds[i][0])+self.bounds[i][0]
+            solution.append(P.tolist())
+        return solution
     def index_of(self,a,list):
         for i in range(0,len(list)):
             if list[i] == a:
@@ -46,7 +60,7 @@ class NSGA2():
         while(len(sorted_list)!=len(list1)):
             if self.index_of(min(values),values) in list1:
                 sorted_list.append(self.index_of(min(values),values))
-            values[self.index_of(min(values),values)] = math.inf
+            values[self.index_of(min(values),values)] = inf
         return sorted_list
     
     #Function to carry out NSGA-II's fast non dominated sort
@@ -109,12 +123,12 @@ class NSGA2():
             sorted2 = self.sort_by_values(front, values2[:])  #找到front中的个体索引序列
             distance[0] = 4444
             distance[lenth-1] = 4444
-            for k in range(2,lenth-1):
+            for k in range(1,lenth-1):
                 distance[k] = distance[k]+ (values1[sorted1[k+1]] - values1[sorted1[k-1]])/(max(values1)-min(values1))
                 # print("/n")
                 # print("k:",k)
                 # print("distance[{}]".format(k),distance[k])
-            for k in range(2,lenth-1):
+            for k in range(1,lenth-1):
                 distance[k] = distance[k]+ (values2[sorted2[k+1]] - values2[sorted2[k-1]])/(max(values2)-min(values2))
         return distance
     
@@ -166,11 +180,11 @@ class NSGA2():
 
                     off_1[j] = 0.5 * ((1 + gama[j]) * chromo_parent_1[j] + (1 - gama[j]) * chromo_parent_2[j])
                     off_2[j] = 0.5 * ((1 - gama[j]) * chromo_parent_1[j] + (1 + gama[j]) * chromo_parent_2[j])
-
+                    
                     # Ensure offspring are within defined domain
                     off_1[j] = np.clip(off_1[j], self.bounds[j][0], self.bounds[j][1])
                     off_2[j] = np.clip(off_2[j], self.bounds[j][0], self.bounds[j][1])
-
+                # print("gama",gama)    
         
 
             # Polynomial mutation
@@ -186,7 +200,7 @@ class NSGA2():
 
                     u=np.random.rand()
                     delta1=(off_1[j]-self.bounds[j][0])/(self.bounds[j][1]-self.bounds[j][0])
-                    delta2=(self.bounds[j][1]- off_1[j])/(self.bounds[j][1]--self.bounds[j][0])
+                    delta2=(self.bounds[j][1]- off_1[j])/(self.bounds[j][1]-self.bounds[j][0])
                     if u2[j] <0.5:
                         delta[j]=pow(2*u2[j]+(1-2*u2[j])*(1-delta1)**(etm+1),1/(etm+1))-1
                     else:
@@ -214,8 +228,9 @@ class NSGA2():
     #Main program starts here
         # pop_size = 20
         # max_gen = 150
-        
-        solution = [[random.uniform(low, high) for low, high in self.bounds] for i in range(0,self.pop_size)]
+        solution=self.first_population()
+        # print(solution)
+        # solution = [[random.uniform(low, high) for low, high in self.bounds] for i in range(0,self.pop_size)]
         for i in range(self.pop_size):
             for j in range(len(self.bounds)):
                 if self.flag[j]==1:
@@ -227,7 +242,7 @@ class NSGA2():
 
 
         
-
+         
         gen_no=0
         while(gen_no<self.max_gen):
             print('\n')
@@ -282,7 +297,10 @@ class NSGA2():
                 # front22 = sort_by_values(non_dominated_sorted_solution2_1[:], crowding_distance_values2[i][:])#对同层中的拥挤度进行排序
                 front22 = self.sort_by_values(range(0,len(non_dominated_sorted_solution2[i])), crowding_distance_values2[i][:])#对同层中的拥挤度进行排序
                 # print("front22",front22)
+
                 front = [non_dominated_sorted_solution2[i][front22[j]] for j in range(0,len(non_dominated_sorted_solution2[i]))]
+                # print(crowding_distance_values2[i])
+                # print('front',front22)
                 # print('front',front)
                 front.reverse()
                 for value in front:
@@ -293,14 +311,26 @@ class NSGA2():
                     break
             solution = np.array([solution2[i] for i in new_solution])
             gen_no = gen_no + 1
-        #
+            function1 = [i * -1 for  i in function1_values]
+            function2 = [j * -1  for j in function2_values]
+            
+
+            plt.scatter(function1,function2, marker=".",color=(0.2,0.5,gen_no/self.max_gen))
         # Lets plot the final front now
         # print(first_gen)
-        print(solution)
+        # print(solution)
         print(non_dominated_sorted_solution)
-        function1 = [i * -1 for i in function1_values]
+        function1 = [i * -1  for i in function1_values]
         function2 = [j * -1  for j in function2_values]
-
+        # v1=1
+        # v2=-1
+        # index=0
+        # for i in range(0,self.pop_size):
+        #     if (function1[i]-v1)*(function2[i]-v2)>max_obj:
+        #         max_obj=(function1[i]-v1)*(function2[i]-v2)
+        #         index=i
+        # if index==0 or index==self.pop_size:
+        #     self.max_gen
         return [solution,function1,function2]
 
 # def obj1(x):
