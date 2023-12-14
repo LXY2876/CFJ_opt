@@ -2,7 +2,7 @@ from math import *
 from NSGA2 import *
 import numpy as np
 import pandas as pd
-#X=[N,W.Cmiu_takeoff,Cmiu_curise]
+#X=[N,W_D,Cmiu_takeoff,Cmiu_curise]
 
 
 class PLANE():
@@ -13,9 +13,9 @@ class PLANE():
 
         self.rho=1.225
         self.c=0.3
-        self.A=8
+        self.A=10
         self.S=self.c**2*self.A
-        
+        self.structure=0.5
         self.W_S=600
         self.G0=self.S*self.W_S#飞机总重(N)
         self.G1=0
@@ -44,17 +44,20 @@ class PLANE():
         self.miu=0.2#地面滑跑摩擦阻力系数
         self.TofDistance=0
         self.Range=0
+        self.tof_ref=0
+        self.curise_ref=0
     def get_raw(self):
         self.V_tof=1.2*sqrt(self.G0/(0.5*self.rho*self.CL_tof))
         F0=self.T_max-self.miu*self.G0
         CD=self.Cd0_tof+self.k*self.CL_tof**2
         F1=self.T_max-0.5*self.V_tof**2*self.S*(CD)
 
-        tof=self.G0/(2*9.8)*self.V_tof**2/(F0-F1)*log(F0/F1)
+        self.tof_ref=self.G0/(2*9.8)*self.V_tof**2/(F0-F1)*log(F0/F1)
         CD_curise=self.CD0_curise+self.k*self.CL_curise**2
-        R=self.Gb*self.Eb/(self.G0)*(self.CL_curise/(CD_curise/self.eta_engine )) 
-        return [tof ,R]
+        self.curise_ref=self.Gb*self.Eb/(self.G0)*(self.CL_curise/(CD_curise/self.eta_engine )) 
+        # return [tof ,R]
     def update_aero(self):
+        self.get_raw()
         self.CL_tof=self.CL_tof0+6*self.S_CFJ/self.S*self.Cmiu_takeoff
         self.CL_curise=self.CL_curise+6*self.S_CFJ/self.S*self.Cmiu_curise
         self.CD_curise=self.CD0_curise-self.beta*self.S_CFJ/self.S*self.Cmiu_curise+self.k*self.CL_curise**2
@@ -137,15 +140,21 @@ def function1(x):
     plane.update_G()
     
     plane.get_performance()
-    return  -1*plane.TofDistance 
+    return  1/(plane.TofDistance /plane.tof_ref)
 
 def function2(x):
     plane=PLANE(x)
     plane.update_aero()
     plane.update_G()
     plane.get_performance()
-    return  plane.Range 
+    return  plane.Range / plane.curise_ref
 def CV_value(x):
+    # plane=PLANE(x)
+    # if x[0]*plane.Duct.W<=0.8*plane.A*plane.c:
+    
+    #     return 0
+    # else:
+    #     return (x[0]*plane.Duct.W-0.8*plane.A*plane.c)
     return 0
 
 if __name__=='__main__':
@@ -155,8 +164,10 @@ if __name__=='__main__':
     v1=max(F1)
     v2=max(F2)
     baseline=PLANE([0,0,0,0]).get_raw()
-    v1=baseline[0]
-    v2=-1*baseline[1]
+    # v1=baseline[0]
+    # v2=-1*baseline[1]
+    v1=-1
+    v2=-1
     index=0
     max_obj=0
     
@@ -166,7 +177,7 @@ if __name__=='__main__':
         if (F1[i]-v1)*(F2[i]-v2)>max_obj:
             max_obj=(F1[i]-v1)*(F2[i]-v2)
             index=i
-    X=np.linspace(F1[index]-0.01,F1[index]+0.01,10)
+    X=np.linspace(F1[index]-0.2,F1[index]+0.2,30)
     Y=max_obj/(X-v1)+v2
 
     planes=[PLANE(x) for x in result]
@@ -185,7 +196,7 @@ if __name__=='__main__':
     
     plt.xlabel('Tof', fontsize=15)
     plt.ylabel('Curise', fontsize=15)
-    plt.scatter(F1, F2, marker='+',color='k')
+    plt.scatter(F1, F2, marker='+',color='b')
     # plt.xlim(0, 1)
     # plt.ylim(-2, -1)
     dic1={"N":result[:,0],"W_D":result[:,1],"Cmiu_Tof":result[:,2],"Cmiu_Curise":result[:,3],"TofDistance":F1,"CuriseRange":F2,"总重":other_info[:,0],"管道重量":other_info[:,1],"电机重量":other_info[:,2]}

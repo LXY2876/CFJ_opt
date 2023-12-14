@@ -18,8 +18,8 @@ class NSGA2():
         self.min_x=[-55,-55]
         self.max_x=[55,55]
         self.flag=flag
-        self.pop_size=20
-        self.max_gen=50
+        self.pop_size=50
+        self.max_gen=200
         self.obj1=func1
         self.obj2=func2
         self.constraint=constraint
@@ -273,7 +273,7 @@ class NSGA2():
             #     a2 = random.randint(0,pop_size-1)
             #     b2 = random.randint(0,pop_size-1)
             #     solution2=np.vstack((solution2,crossover(solution[a1],solution[b1])))
-            solution2=np.vstack((solution,self.cross_mutation(solution,1,0.5,5,5)))
+            solution2=np.vstack((solution,self.cross_mutation(solution,1,0.5,20,20)))
             # print(cross_mutation(solution,1,0.5,0.5,0.5))
             # print('solution2',solution2)
             function1_values2 = [self.obj1(solution2[i])for i in range(0,2*self.pop_size)]
