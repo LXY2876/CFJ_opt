@@ -154,17 +154,28 @@ class NSGA2():
             solution[0] = self.min_x[0]+(self.max_x[0]-self.min_x[0])*random.random()
             solution[1] = self.min_x[1]+(self.max_x[1]-self.min_x[1])*random.random()
         return solution
-    # def tournament_selection(self,non_dominated_sorted_solution,crowding_distance_values):
-    #     pool_size=self.pop_size/2
-    #     candidate=[0 for i in range(self.tour_size)]
-    #     for i in range(pool_size):
-    #         for j in range(self.tour_size):
-    #             candidate[j]=random.randint(0, self.pop_size - 1)
-    #             if j>0:
-    #                 while candidate[j] not in candidate[0:j-1]:
-    #                     candidate[j]=random.randint(0, self.pop_size - 1)
-    #         candidate_rank=[for ]
-          
+    def tournament_selection(self,non_dominated_sorted_solution,crowding_distance_values):
+        tour_pop=[0 for i in range(self.tour_size)]
+        pool_size=self.pop_size/2
+        candidate=[0 for i in range(self.tour_size)]
+        candidate_rank=[0 for i in range(self.tour_size)]
+        candidate_crowding=[0 for i in range(self.tour_size)]
+        for i in range(pool_size):
+            for j in range(self.tour_size):
+                candidate[j]=random.randint(0, self.pop_size - 1)
+                if j>0:
+                    while candidate[j] not in candidate[0:j-1]:
+                        candidate[j]=random.randint(0, self.pop_size - 1)
+                for k in range(len(non_dominated_sorted_solution)):
+                    if candidate[j] in non_dominated_sorted_solution[k]:
+                        candidate_rank[j]=k
+                        candidate_crowding[j]=crowding_distance_values[k][self.index_of(candidate[j],non_dominated_sorted_solution[k])]
+            min_index=[j for j in candidate_rank if j==min(candidate_rank)]
+            if len(min_index) != 1:
+                tour_pop[i]=candidate_rank[candidate_crowding.index(min([candidate_crowding[j] for j in min_index]))]
+
+            else:
+                tour_pop[i]=candidate[min_index]
 
     def cross_mutation(self,chromo_parent,  pc, pm, yita1, yita2):
         # Simulated binary crossover and polynomial mutation
