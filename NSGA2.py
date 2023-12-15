@@ -18,12 +18,13 @@ class NSGA2():
         self.min_x=[-55,-55]
         self.max_x=[55,55]
         self.flag=flag
-        self.pop_size=50
-        self.max_gen=200
+        self.pop_size=40
+        self.max_gen=400
         self.obj1=func1
         self.obj2=func2
         self.constraint=constraint
         self.bounds=[(-55,55),(-55,55)]
+        self.tour_size=2
     # def obj1(self,x):
     #     value = -x[0]**2
     #     return value
@@ -74,24 +75,26 @@ class NSGA2():
             S[p]=[]
             n[p]=0
             for q in range(0, len(values1)):
-                if CV_value[p]==0 and CV_value[q]>0:
-                    if q not in S[p]:
-                        S[p].append(q)    
-                elif CV_value[p]<0 and CV_value[q]==0:
-                    n[p] = n[p] + 1            
-                elif CV_value[p]==0 and CV_value[q]==0:
+
+                if CV_value[p]==0 and CV_value[q]==0:
                      
                     if (values1[p] > values1[q] and values2[p] > values2[q]) or (values1[p] >= values1[q] and values2[p] > values2[q]) or (values1[p] > values1[q] and values2[p] >= values2[q]):
                         if q not in S[p]:
                             S[p].append(q)
                     elif (values1[q] > values1[p] and values2[q] > values2[p]) or (values1[q] >= values1[p] and values2[q] > values2[p]) or (values1[q] > values1[p] and values2[q] >= values2[p]):
                         n[p] = n[p] + 1
+                elif CV_value[p]==0 and CV_value[q]>0:
+                    if q not in S[p]:
+                        S[p].append(q)    
+                elif CV_value[p]>0 and CV_value[q]==0:
+                    n[p] = n[p] + 1            
+
                 else:
                     if CV_value[p]<CV_value[q]:
                         if q not in S[p]:
                             S[p].append(q)
-                        elif CV_value[p]>CV_value[q]:
-                            n[p] = n[p] + 1     
+                    elif CV_value[p]>CV_value[q]:
+                        n[p] = n[p] + 1     
             if n[p]==0:
                 rank[p] = 0
                 if p not in front[0]:
@@ -146,6 +149,18 @@ class NSGA2():
             solution[0] = self.min_x[0]+(self.max_x[0]-self.min_x[0])*random.random()
             solution[1] = self.min_x[1]+(self.max_x[1]-self.min_x[1])*random.random()
         return solution
+    # def tournament_selection(self,non_dominated_sorted_solution,crowding_distance_values):
+    #     pool_size=self.pop_size/2
+    #     candidate=[0 for i in range(self.tour_size)]
+    #     for i in range(pool_size):
+    #         for j in range(self.tour_size):
+    #             candidate[j]=random.randint(0, self.pop_size - 1)
+    #             if j>0:
+    #                 while candidate[j] not in candidate[0:j-1]:
+    #                     candidate[j]=random.randint(0, self.pop_size - 1)
+    #         candidate_rank=[for ]
+          
+
     def cross_mutation(self,chromo_parent,  pc, pm, yita1, yita2):
         # Simulated binary crossover and polynomial mutation
         pop, x_num = chromo_parent.shape
@@ -193,23 +208,24 @@ class NSGA2():
                 u2 = np.random.rand(x_num)
                 delta = np.zeros(x_num)
                 for j in range(x_num):
+                    if random.random() < 1/x_num:
                     # if u2[j] < 0.5:
                     #     delta[j] = (2 * u2[j]) ** (1 / (yita2 + 1)) - 1
                     # else:
                     #     delta[j] = 1 - (2 * (1 - u2[j])) ** (1 / (yita2 + 1))
 
-                    u=np.random.rand()
-                    delta1=(off_1[j]-self.bounds[j][0])/(self.bounds[j][1]-self.bounds[j][0])
-                    delta2=(self.bounds[j][1]- off_1[j])/(self.bounds[j][1]-self.bounds[j][0])
-                    if u2[j] <0.5:
-                        delta[j]=pow(2*u2[j]+(1-2*u2[j])*(1-delta1)**(etm+1),1/(etm+1))-1
-                    else:
-                        delta[j]=1-pow(2*(1-u2[j])+2*(u2[j]-0.5)*(1-delta2)**(etm+1),1/(etm+1))
+                        u=np.random.rand()
+                        delta1=(off_1[j]-self.bounds[j][0])/(self.bounds[j][1]-self.bounds[j][0])
+                        delta2=(self.bounds[j][1]- off_1[j])/(self.bounds[j][1]-self.bounds[j][0])
+                        if u2[j] <0.5:
+                            delta[j]=pow(2*u2[j]+(1-2*u2[j])*(1-delta1)**(etm+1),1/(etm+1))-1
+                        else:
+                            delta[j]=1-pow(2*(1-u2[j])+2*(u2[j]-0.5)*(1-delta2)**(etm+1),1/(etm+1))
 
-                    off_1[j] += delta[j]*(self.bounds[j][1]-self.bounds[j][0])
-                    # print("delta",delta[j])
-                    # off_1[j] += delta[j]
-                    off_1[j] = np.clip(off_1[j],self.bounds[j][0], self.bounds[j][1])
+                        off_1[j] += delta[j]*(self.bounds[j][1]-self.bounds[j][0])
+                        # print("delta",delta[j])
+                        # off_1[j] += delta[j]
+                        off_1[j] = np.clip(off_1[j],self.bounds[j][0], self.bounds[j][1])
             # print("mutation",delta)
              
             off[suoyin, :] = off_1
@@ -273,7 +289,7 @@ class NSGA2():
             #     a2 = random.randint(0,pop_size-1)
             #     b2 = random.randint(0,pop_size-1)
             #     solution2=np.vstack((solution2,crossover(solution[a1],solution[b1])))
-            solution2=np.vstack((solution,self.cross_mutation(solution,1,0.5,20,20)))
+            solution2=np.vstack((solution,self.cross_mutation(solution,1,1,20,20)))
             # print(cross_mutation(solution,1,0.5,0.5,0.5))
             # print('solution2',solution2)
             function1_values2 = [self.obj1(solution2[i])for i in range(0,2*self.pop_size)]
@@ -311,17 +327,31 @@ class NSGA2():
                     break
             solution = np.array([solution2[i] for i in new_solution])
             gen_no = gen_no + 1
-            function1 = [i * -1 for  i in function1_values]
-            function2 = [j * -1  for j in function2_values]
-            
 
-            plt.scatter(function1,function2, marker=".",color=(0.2,0.5,gen_no/self.max_gen))
+            function1 = [i * -1 for  i in function1_values2]
+            function2 = [j * -1  for j in function2_values2]
+            feasible_index=[i for i in range(2*self.pop_size) if CV_value[i]==0]
+            feasible_value1=[-1*function1_values2[i] for i in feasible_index]
+            feasible_value2=[-1*function2_values2[i] for i in feasible_index]
+            infeasible_index=[i for i in range(2*self.pop_size) if CV_value[i]>0]
+            infeasible_value1=[-1*function1_values2[i] for i in infeasible_index]
+            infeasible_value2=[-1*function2_values2[i] for i in infeasible_index]
+            front_value1=[-1*function1_values2[i] for i in non_dominated_sorted_solution2[0]]
+            front_value2=[-1*function2_values2[i] for i in non_dominated_sorted_solution2[0]]
+            plt.scatter(feasible_value1,feasible_value2, marker=".",color=(0.2,0.5,gen_no/self.max_gen))
+            # plt.scatter(infeasible_value1,infeasible_value2, marker="*",color='k')
+            plt.scatter(front_value1,front_value2, marker="x",color=(0.2,0.5,gen_no/self.max_gen))
+            
+            # plt.show()
         # Lets plot the final front now
         # print(first_gen)
         # print(solution)
+        print(CV_value)
         print(non_dominated_sorted_solution)
-        function1 = [i * -1  for i in function1_values]
-        function2 = [j * -1  for j in function2_values]
+        # function1 = [i * -1  for i in function1_values]
+        # function2 = [j * -1  for j in function2_values]
+        function1 = [function1_values2[i] * -1  for i in new_solution]
+        function2 = [function2_values2[i] * -1  for i in new_solution]
         # v1=1
         # v2=-1
         # index=0

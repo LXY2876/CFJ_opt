@@ -150,7 +150,7 @@ def function2(x):
     return  plane.Range / plane.curise_ref
 def CV_value(x):
     # plane=PLANE(x)
-    # if x[0]*plane.Duct.W<=0.8*plane.A*plane.c:
+    # if x[0]*plane.Duct.W<=0.8*plane.A*plane.c+0.001*plane.A*plane.c:
     
     #     return 0
     # else:
@@ -159,7 +159,7 @@ def CV_value(x):
 
 if __name__=='__main__':
     nsga=NSGA2(function1,function2,CV_value,[1,0,0,0])
-    nsga.bounds=[(2,10),(2,7),(0.08,0.22),(0.03,0.1)]
+    nsga.bounds=[(2,14),(2,7),(0.08,0.3),(0.03,0.1)]
     result,F1,F2=nsga.main()
     v1=max(F1)
     v2=max(F2)
