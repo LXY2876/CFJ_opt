@@ -149,13 +149,13 @@ def function2(x):
     plane.get_performance()
     return  plane.Range / plane.curise_ref
 def CV_value(x):
-    # plane=PLANE(x)
-    # if x[0]*plane.Duct.W<=0.8*plane.A*plane.c+0.001*plane.A*plane.c:
+    plane=PLANE(x)
+    if x[0]*plane.Duct.W<=0.8*plane.A*plane.c+0.001*plane.A*plane.c:
     
-    #     return 0
-    # else:
-    #     return (x[0]*plane.Duct.W-0.8*plane.A*plane.c)
-    return 0
+        return 0
+    else:
+        return (x[0]*plane.Duct.W-0.8*plane.A*plane.c)
+    # return 0
 
 if __name__=='__main__':
     nsga=NSGA2(function1,function2,CV_value,[1,0,0,0])

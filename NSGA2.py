@@ -18,8 +18,8 @@ class NSGA2():
         self.min_x=[-55,-55]
         self.max_x=[55,55]
         self.flag=flag
-        self.pop_size=40
-        self.max_gen=400
+        self.pop_size=100
+        self.max_gen=200
         self.obj1=func1
         self.obj2=func2
         self.constraint=constraint
@@ -120,19 +120,24 @@ class NSGA2():
     def crowding_distance(self,values1, values2, front):
         # distance = [0 for i in range(len(front))]
         lenth= len(front)
-        for i in range(lenth):
-            distance = [0 for i in range(lenth)]
-            sorted1 = self.sort_by_values(front, values1[:])  #找到front中的个体索引序列
-            sorted2 = self.sort_by_values(front, values2[:])  #找到front中的个体索引序列
-            distance[0] = 4444
-            distance[lenth-1] = 4444
-            for k in range(1,lenth-1):
-                distance[k] = distance[k]+ (values1[sorted1[k+1]] - values1[sorted1[k-1]])/(max(values1)-min(values1))
-                # print("/n")
-                # print("k:",k)
-                # print("distance[{}]".format(k),distance[k])
-            for k in range(1,lenth-1):
-                distance[k] = distance[k]+ (values2[sorted2[k+1]] - values2[sorted2[k-1]])/(max(values2)-min(values2))
+        # for i in range(lenth):
+        distance = [0 for i in range(lenth)]
+        sorted1 = self.sort_by_values(front, values1[:])  #找到front中的个体索引序列
+        sorted2 = self.sort_by_values(front, values2[:])  #找到front中的个体索引序列
+        # distance[0] = 4444
+        # distance[lenth-1] = 4444
+        index_front=[self.index_of(sorted1[i],front) for i in range(lenth)]
+        distance[index_front[0]] = 4444
+        distance[index_front[lenth-1]] = 4444            
+        for k in range(1,lenth-1):
+            distance[index_front[k]] = distance[index_front[k]]+ (values1[sorted1[k+1]] - values1[sorted1[k-1]])/(max(values1)-min(values1))
+            # print("/n")
+            # print("k:",k)
+            # print("distance[{}]".format(k),distance[k])
+        index_front.reverse()
+        for k in range(1,lenth-1):
+            distance[index_front[k]] = distance[index_front[k]]+ (values2[sorted2[k+1]] - values2[sorted2[k-1]])/(max(values2)-min(values2))
+        
         return distance
     
     # #Function to carry out the crossover
