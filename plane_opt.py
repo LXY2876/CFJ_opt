@@ -2,6 +2,7 @@ from math import *
 from NSGA2 import *
 import numpy as np
 import pandas as pd
+import pickle
 #X=[N,W_D,Cmiu_takeoff,Cmiu_curise]
 
 
@@ -81,6 +82,7 @@ class PLANE():
         # print("motor_curise",motor_curise)
         # print("motor_tof",0.5*self.rho*self.S_CFJ*self.Duct.pc_tof/(self.Pd*self.eta)*self.V_tof**3*9.8)
         self.G1=max(motor_tof,motor_curise)+self.G0+self.Duct.duct
+    
 
 
     def get_performance(self):
@@ -98,6 +100,11 @@ class PLANE():
         # CD_curise=self.CD0_curise-self.beta*self.Cmiu_curise
         self.Range=self.Gb*self.Eb/(self.G1)*(self.CL_curise/(self.CD_curise/self.eta_engine+self.S_CFJ/self.S*self.Duct.pc_curise/self.eta)) 
         return [self.TofDistance,self.Range]
+    
+    def update_date(self,x):
+        
+        pass
+
 class CFJ():
     def  __init__(self,x,c):
          
@@ -116,9 +123,14 @@ class CFJ():
         self.t=0.001#mm
         self.inj_c=0.01
         self.suc_c=7/300
-        
-        self.K=self.W/self.D*0.1+0.018*(self.W/self.D)**2#管道总压损失系数
-        
+        # with open('../duct_design/gpr_model.pkl', 'rb') as file:
+        #     self.model_gpr = pickle.load(file)
+        # self.K1,_=self.model_gpr.predict([[x[1],x[2]]], return_std=True)#管道总压损失系数
+        # self.K2,_=self.model_gpr.predict([[x[1],x[3]]], return_std=True)#管道总压损失系数
+        # self.K1=self.K1[0]
+        # self.K2=self.K2[0]
+        self.K1=0.0*(self.W/self.D*0.1+0.018*(self.W/self.D)**2)#管道总压损失系数
+        self.K2=0.0*(self.W/self.D*0.1+0.018*(self.W/self.D)**2)#管道总压损失系数
         self.duct=x[0]*self.duct_mass()*9.8#管道重量(N)
         self.pc_tof=self.Pc_Takeoff()
         self.pc_curise=self.Pc_Curise()
@@ -126,11 +138,12 @@ class CFJ():
     def duct_mass(self):
         return self.rho_duct*(2*self.W+self.D*pi)*self.c*self.t
     def Pc_Takeoff(self):
+        # print(self.K1)
         return  sqrt(self.Cmiu_tof*self.inj_c/2)*\
-            (self.deltaCP0_Tof+self.deltaCP_K*self.Cmiu_tof+self.Cmiu_tof/(2*self.inj_c))*(1-(self.inj_c/self.suc_c)**2+self.K)
+            (self.deltaCP0_Tof+self.deltaCP_K*self.Cmiu_tof+self.Cmiu_tof/(2*self.inj_c))*(1-(self.inj_c/self.suc_c)**2+self.K1)
     def Pc_Curise(self):
         return sqrt(self.Cmiu_curise*self.inj_c/2)*\
-            (self.deltaCP0_curise+self.deltaCP_K*self.Cmiu_curise+self.Cmiu_curise/(2*self.inj_c))*(1-(self.inj_c/self.suc_c)**2+self.K)
+            (self.deltaCP0_curise+self.deltaCP_K*self.Cmiu_curise+self.Cmiu_curise/(2*self.inj_c))*(1-(self.inj_c/self.suc_c)**2+self.K2)
 
  
 
@@ -149,13 +162,13 @@ def function2(x):
     plane.get_performance()
     return  plane.Range / plane.curise_ref
 def CV_value(x):
-    plane=PLANE(x)
-    if x[0]*plane.Duct.W<=0.8*plane.A*plane.c+0.001*plane.A*plane.c:
+    # plane=PLANE(x)
+    # if x[0]*plane.Duct.W<=0.8*plane.A*plane.c+0.001*plane.A*plane.c:
     
-        return 0
-    else:
-        return (x[0]*plane.Duct.W-0.8*plane.A*plane.c)
-    # return 0
+    #     return 0
+    # else:
+    #     return (x[0]*plane.Duct.W-0.8*plane.A*plane.c)
+    return 0
 
 if __name__=='__main__':
     nsga=NSGA2(function1,function2,CV_value,[1,0,0,0])
