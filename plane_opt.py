@@ -4,14 +4,13 @@ import numpy as np
 import pandas as pd
 import pickle
 #X=[N,W_D,Cmiu_takeoff,Cmiu_curise]
-
+with open('../duct_design/gpr_model.pkl', 'rb') as file:
+    model_gpr = pickle.load(file)
 
 class PLANE():
      
     def __init__(self,x):
-
-        self.x=x
-
+        self.x=0
         self.rho=1.225
         self.c=0.3
         self.A=10
@@ -20,18 +19,20 @@ class PLANE():
         self.W_S=600
         self.G0=self.S*self.W_S#飞机总重(N)
         self.G1=0
-        self.k=1/(pi*self.A*0.8) #奥斯瓦尔德效率因子取0.8
-        self.parasite_drag=0.02095
+        self.k=1/(pi*self.A*0.94) #奥斯瓦尔德效率因子取0.8
+        self.parasite_drag=0.02148
         self.CL_tof0=1
-        self.CL_tof=1.2
+        self.CL_tof=1.25
         self.V_tof=0
-        self.CL_curise=0.55
+        self.CL_curise=0.73
         self.CD_curise=0.02
+        self.CD_tof=0
         self.V=sqrt(self.W_S/(0.5*self.rho*self.CL_curise))
-        self.Cd0_tof=0.1
-        self.CD0_curise=0.1
+        self.Cd0_tof=0.0051
+        self.CD0_curise=0.0051
+        self.a1=7
+        self.a2=3
         self.beta=1
-        
         self.Cmiu_takeoff=x[2]
         self.Cmiu_curise=x[3]
         self.Pd=3000 #w/kg
@@ -50,18 +51,19 @@ class PLANE():
     def get_raw(self):
         self.V_tof=1.2*sqrt(self.G0/(0.5*self.rho*self.CL_tof))
         F0=self.T_max-self.miu*self.G0
-        CD=self.Cd0_tof+self.k*self.CL_tof**2
-        F1=self.T_max-0.5*self.V_tof**2*self.S*(CD)
+        self.CD_tof=self.Cd0_tof+self.k*self.CL_tof**2+self.parasite_drag
+        F1=self.T_max-0.5*self.V_tof**2*self.S*(self.CD_tof)
 
         self.tof_ref=self.G0/(2*9.8)*self.V_tof**2/(F0-F1)*log(F0/F1)
-        CD_curise=self.CD0_curise+self.k*self.CL_curise**2
+        CD_curise=self.CD0_curise+self.k*self.CL_curise**2+self.parasite_drag
         self.curise_ref=self.Gb*self.Eb/(self.G0)*(self.CL_curise/(CD_curise/self.eta_engine )) 
         # return [tof ,R]
     def update_aero(self):
         self.get_raw()
-        self.CL_tof=self.CL_tof0+6*self.S_CFJ/self.S*self.Cmiu_takeoff
-        self.CL_curise=self.CL_curise+6*self.S_CFJ/self.S*self.Cmiu_curise
-        self.CD_curise=self.CD0_curise-self.beta*self.S_CFJ/self.S*self.Cmiu_curise+self.k*self.CL_curise**2
+        self.CL_tof=self.CL_tof0+self.S_CFJ/self.S*(self.a1*self.Cmiu_takeoff-0.05)
+        self.CL_curise=self.CL_curise+self.S_CFJ/self.S*(self.a2*self.Cmiu_curise-0.05)
+        self.CD_tof=self.Cd0_tof-self.S_CFJ/self.S*(self.beta*self.Cmiu_takeoff-0.01)+self.k*self.CL_tof**2+self.parasite_drag
+        self.CD_curise=self.CD0_curise-self.S_CFJ/self.S*(self.beta*self.Cmiu_curise-0.01)+self.k*self.CL_curise**2+self.parasite_drag
          
     def update_G(self):
         try:
@@ -81,15 +83,15 @@ class PLANE():
         # print("duct",self.Duct.duct)
         # print("motor_curise",motor_curise)
         # print("motor_tof",0.5*self.rho*self.S_CFJ*self.Duct.pc_tof/(self.Pd*self.eta)*self.V_tof**3*9.8)
-        self.G1=max(motor_tof,motor_curise)+self.G0+self.Duct.duct
+        self.G1=max(motor_tof,motor_curise)+self.G0+self.Duct.duct+(max(motor_tof,motor_curise)+self.Duct.duct)*(self.structure/(1-self.structure))
     
 
 
     def get_performance(self):
          
         F0=self.T_max-self.miu*self.G1
-        CD=self.Cd0_tof-self.beta*self.Cmiu_takeoff+self.k*self.CL_tof**2
-        F1=self.T_max-0.5*self.V_tof**2*self.S*(CD)
+        
+        F1=self.T_max-0.5*self.V_tof**2*self.S*(self.CD_tof)
         # print(F0,F1)
         try:
             self.TofDistance=self.G1/(2*9.8)*self.V_tof**2/(F0-F1)*log(F0/F1)
@@ -102,8 +104,13 @@ class PLANE():
         return [self.TofDistance,self.Range]
     
     def update_date(self,x):
+        self.x=x
+
+        self.get_raw()
+        self.update_aero()
+        self.update_G()
+        self.get_performance()
         
-        pass
 
 class CFJ():
     def  __init__(self,x,c):
@@ -118,19 +125,19 @@ class CFJ():
         self.deltaCP0_Tof=-1
         self.deltaCP0_curise=-1
         self.deltaCP_K=-20
-        self.rho_duct=1050
+        self.rho_duct=1350
 
         self.t=0.001#mm
         self.inj_c=0.01
         self.suc_c=7/300
         # with open('../duct_design/gpr_model.pkl', 'rb') as file:
         #     self.model_gpr = pickle.load(file)
-        # self.K1,_=self.model_gpr.predict([[x[1],x[2]]], return_std=True)#管道总压损失系数
-        # self.K2,_=self.model_gpr.predict([[x[1],x[3]]], return_std=True)#管道总压损失系数
-        # self.K1=self.K1[0]
-        # self.K2=self.K2[0]
-        self.K1=0.0*(self.W/self.D*0.1+0.018*(self.W/self.D)**2)#管道总压损失系数
-        self.K2=0.0*(self.W/self.D*0.1+0.018*(self.W/self.D)**2)#管道总压损失系数
+        self.K1,_=model_gpr.predict([[x[1],x[2]]], return_std=True)#管道总压损失系数
+        self.K2,_=model_gpr.predict([[x[1],x[3]]], return_std=True)#管道总压损失系数
+        self.K1=self.K1[0]
+        self.K2=self.K2[0]
+        # self.K1=0.0*(self.W/self.D*0.1+0.018*(self.W/self.D)**2)#管道总压损失系数
+        # self.K2=0.0*(self.W/self.D*0.1+0.018*(self.W/self.D)**2)#管道总压损失系数
         self.duct=x[0]*self.duct_mass()*9.8#管道重量(N)
         self.pc_tof=self.Pc_Takeoff()
         self.pc_curise=self.Pc_Curise()
@@ -148,35 +155,41 @@ class CFJ():
  
 
 def function1(x):
+    # global plane
     plane=PLANE(x)
     plane.update_aero()
     plane.update_G()
     
     plane.get_performance()
+    # plane.update_date(x)
     return  1/(plane.TofDistance /plane.tof_ref)
 
 def function2(x):
+    # global plane
     plane=PLANE(x)
     plane.update_aero()
     plane.update_G()
     plane.get_performance()
+    # plane.update_date(x)
     return  plane.Range / plane.curise_ref
 def CV_value(x):
-    # plane=PLANE(x)
-    # if x[0]*plane.Duct.W<=0.8*plane.A*plane.c+0.001*plane.A*plane.c:
+    plane=PLANE(x)
+    if x[0]*plane.Duct.W<=0.8*plane.A*plane.c+0.001*plane.A*plane.c:
     
-    #     return 0
-    # else:
-    #     return (x[0]*plane.Duct.W-0.8*plane.A*plane.c)
-    return 0
+        return 0
+    else:
+        return (x[0]*plane.Duct.W-0.8*plane.A*plane.c)
+    # return 0
 
 if __name__=='__main__':
+     
     nsga=NSGA2(function1,function2,CV_value,[1,0,0,0])
-    nsga.bounds=[(2,14),(2,7),(0.08,0.3),(0.03,0.1)]
+    nsga.bounds=[(2,14),(2,7),(0.08,0.2),(0.03,0.1)]
     result,F1,F2=nsga.main()
+    print(result)
     v1=max(F1)
     v2=max(F2)
-    baseline=PLANE([0,0,0,0]).get_raw()
+ 
     # v1=baseline[0]
     # v2=-1*baseline[1]
     v1=-1
@@ -190,13 +203,14 @@ if __name__=='__main__':
         if (F1[i]-v1)*(F2[i]-v2)>max_obj:
             max_obj=(F1[i]-v1)*(F2[i]-v2)
             index=i
-    X=np.linspace(F1[index]-0.2,F1[index]+0.2,30)
+    X=np.linspace(F1[index]-0.05,F1[index]+0.05,30)
     Y=max_obj/(X-v1)+v2
 
     planes=[PLANE(x) for x in result]
     other_info=np.zeros([nsga.pop_size,3])
     i=0
     for plane in planes:
+         
         plane.update_aero()
         plane.update_G()
         plane.get_performance()

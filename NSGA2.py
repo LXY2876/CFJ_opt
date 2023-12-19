@@ -130,13 +130,25 @@ class NSGA2():
         distance[index_front[0]] = 4444
         distance[index_front[lenth-1]] = 4444            
         for k in range(1,lenth-1):
-            distance[index_front[k]] = distance[index_front[k]]+ (values1[sorted1[k+1]] - values1[sorted1[k-1]])/(max(values1)-min(values1))
+            denominator = max(values1) - min(values1)
+            if abs(denominator) < 1e-6:  # 用一个小的阈值来判断分母是否接近零
+            # 分母太小，可以选择跳过这次计算或采取其他措施
+                pass
+            else:
+                distance[index_front[k]] = distance[index_front[k]] + (values1[sorted1[k+1]] - values1[sorted1[k-1]]) / denominator
+            # distance[index_front[k]] = distance[index_front[k]]+ (values1[sorted1[k+1]] - values1[sorted1[k-1]])/(max(values1)-min(values1))
             # print("/n")
             # print("k:",k)
             # print("distance[{}]".format(k),distance[k])
         index_front.reverse()
         for k in range(1,lenth-1):
-            distance[index_front[k]] = distance[index_front[k]]+ (values2[sorted2[k+1]] - values2[sorted2[k-1]])/(max(values2)-min(values2))
+            denominator = max(values2) - min(values2)
+            if abs(denominator) < 1e-6:  # 用一个小的阈值来判断分母是否接近零
+                # 分母太小，可以选择跳过这次计算或采取其他措施
+                pass
+            else:
+                distance[index_front[k]] = distance[index_front[k]] + (values2[sorted2[k+1]] - values2[sorted2[k-1]]) / denominator
+            # distance[index_front[k]] = distance[index_front[k]]+ (values2[sorted2[k+1]] - values2[sorted2[k-1]])/(max(values2)-min(values2))
         
         return distance
     
