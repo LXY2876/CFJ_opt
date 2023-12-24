@@ -12,7 +12,7 @@ from numpy import pi
 #First function to optimize
 
 class NSGA2():
-    def __init__(self,func1,func2,constraint,flag):
+    def __init__(self,func1,func2,func3,constraint,flag):
     #Initialization
 
         self.min_x=[-55,-55]
@@ -22,6 +22,7 @@ class NSGA2():
         self.max_gen=300
         self.obj1=func1
         self.obj2=func2
+        self.onj3=func3
         self.constraint=constraint
         self.bounds=[(-55,55),(-55,55)]
         self.tour_size=2
@@ -291,11 +292,13 @@ class NSGA2():
         while(gen_no<self.max_gen):
             print('\n')
             print('gen_no:迭代次数',gen_no)
-            function1_values = [self.obj1(solution[i])for i in range(0,self.pop_size)]
+            # function1_values = [self.obj1(solution[i])for i in range(0,self.pop_size)]
             
-            function2_values = [self.obj2(solution[i])for i in range(0,self.pop_size)]
+            # function2_values = [self.obj2(solution[i])for i in range(0,self.pop_size)]
             
-            CV_value=[self.constraint(solution[i])for i in range(0,self.pop_size)]
+            # CV_value=[self.constraint(solution[i])for i in range(0,self.pop_size)]
+
+            function1_values,function2_values,CV_value=self.onj3(solution)
             # print('function1_values:',function1_values)
             # print('function2_values:', function2_values)
             non_dominated_sorted_solution = self.fast_non_dominated_sort(function1_values[:],function2_values[:],CV_value[:])
@@ -320,9 +323,10 @@ class NSGA2():
             solution2=np.vstack((solution,self.cross_mutation(solution,1,1,20,20)))
             # print(cross_mutation(solution,1,0.5,0.5,0.5))
             # print('solution2',solution2)
-            function1_values2 = [self.obj1(solution2[i])for i in range(0,2*self.pop_size)]
-            function2_values2 = [self.obj2(solution2[i])for i in range(0,2*self.pop_size)]
-            CV_value=[self.constraint(solution2[i])for i in range(0,2*self.pop_size)]
+            # function1_values2 = [self.obj1(solution2[i])for i in range(0,2*self.pop_size)]
+            # function2_values2 = [self.obj2(solution2[i])for i in range(0,2*self.pop_size)]
+            # CV_value=[self.constraint(solution2[i])for i in range(0,2*self.pop_size)]
+            function1_values2,function2_values2,CV_value=self.onj3(solution2)
             non_dominated_sorted_solution2 = self.fast_non_dominated_sort(function1_values2[:],function2_values2[:],CV_value[:])  #2*pop_size
             # print('non_dominated_sorted_solution2', non_dominated_sorted_solution2)
             # print("\n")

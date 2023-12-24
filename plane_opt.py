@@ -13,15 +13,15 @@ class PLANE():
     def __init__(self,x):
         self.x=0
         self.rho=1.225
-        self.c=2
+        self.c=0.6
         self.A=10
         self.S=self.c**2*self.A
         self.structure=0.5
-        self.W_S=800
+        self.W_S=900
         self.G0=self.S*self.W_S#飞机总重(N)
         self.G1=self.G0
         self.k=1/(pi*self.A*0.84) #奥斯瓦尔德效率因子取0.8
-        self.parasite_drag=0.02148
+        self.parasite_drag=0.04148
         self.CL_tof0=1
         self.CL_tof=1.25
         self.V_tof=0
@@ -49,6 +49,8 @@ class PLANE():
         self.Range=0
         self.tof_ref=0
         self.curise_ref=0
+        self.motor_curise=0
+        self.motor_tof=0
     def get_raw(self):
         self.V_tof=1.2*sqrt(self.W_S/(0.5*self.rho*self.CL_tof))
         F0=self.T_max-self.miu*self.G0
@@ -85,13 +87,15 @@ class PLANE():
             print(self.x)
             exit
         self.V_tof=min([i for i in real_roots if i>0])
-        motor_curise=0.5*self.rho*self.V**3*self.S*self.Duct.pc_curise*9.8/(self.Pd*self.eta)
-        motor_tof=0.5*self.rho*self.V_tof**3*self.S_CFJ*self.Duct.pc_tof*9.8/(self.Pd*self.eta)
+        self.G1=self.motor_tof+self.G0+self.Duct.duct+(self.motor_tof+self.Duct.duct)*(self.structure/(1-self.structure))
+        self.V=sqrt(self.G1/(0.5*self.rho*self.S))
+        self.motor_curise=0.5*self.rho*self.V**3*self.S*self.Duct.pc_curise*9.8/(self.Pd*self.eta)
+        self.motor_tof=0.5*self.rho*self.V_tof**3*self.S_CFJ*self.Duct.pc_tof*9.8/(self.Pd*self.eta)
         # print("duct",self.Duct.duct)
         # print("motor_curise",motor_curise)
         # print("motor_tof",0.5*self.rho*self.S_CFJ*self.Duct.pc_tof/(self.Pd*self.eta)*self.V_tof**3*9.8)
-        self.G1=max(motor_tof,motor_curise)+self.G0+self.Duct.duct+(max(motor_tof,motor_curise)+self.Duct.duct)*(self.structure/(1-self.structure))
-    
+        
+
 
 
     def get_performance(self):
@@ -162,22 +166,22 @@ class CFJ():
  
 
 def function1(x):
-    # global plane
+  
     plane=PLANE(x)
     plane.update_aero()
     plane.update_G()
     
     plane.get_performance()
-    # plane.update_date(x)
+     
     return  1/(plane.TofDistance /plane.tof_ref)
 
 def function2(x):
-    # global plane
+  
     plane=PLANE(x)
     plane.update_aero()
     plane.update_G()
     plane.get_performance()
-    # plane.update_date(x)
+ 
     return  plane.Range / plane.curise_ref
 def CV_value(x):
     plane=PLANE(x)
@@ -187,10 +191,43 @@ def CV_value(x):
     else:
         return (x[0]*plane.Duct.W-0.8*plane.A*plane.c)
     # return 0
+def function3(x):
+    pop, x_num = x.shape
+    y1=[0 for i in range(pop)]
+    y2=[0 for i in range(pop)]
+    CV1=[0 for i in range(pop)]
+    CV2=[0 for i in range(pop)]
+    CV3=[0 for i in range(pop)]
+    for i in range(pop):
+        plane=PLANE(x[i])
+        plane.update_aero()
+        plane.update_G()
+        
+        plane.get_performance()
+        y1[i]=1/(plane.TofDistance /plane.tof_ref)
+        y2[i]=plane.Range / plane.curise_ref
+        if x[i][0]*plane.Duct.W<=0.8*plane.A*plane.c+0.001*plane.A*plane.c:
+
+            CV1[i]=0
+        else:
+            CV1[i]=(x[i][0]*plane.Duct.W-0.8*plane.A*plane.c)
+        if plane.motor_curise<=plane.motor_tof:
+            CV2[i]=0
+        else:
+            CV2[i]=plane.motor_curise-plane.motor_tof
+    if max(CV1)>0 and max(CV2)>0:
+        CV3=[CV1[i]/max(CV1)+CV2[i]/max(CV2) for i in range(pop)]
+    elif max(CV1)>0:
+        CV3=[CV1[i]/max(CV1)  for i in range(pop)]
+    elif max(CV2)>0:
+        CV3=[CV2[i]/max(CV2)  for i in range(pop)]
+    else:
+        pass
+    return  y1, y2,CV3
 
 if __name__=='__main__':
      
-    nsga=NSGA2(function1,function2,CV_value,[1,0,0,0])
+    nsga=NSGA2(function1,function2,function3,CV_value,[1,0,0,0])
     nsga.bounds=[(2,14),(2,7),(0.03,0.2),(0.004,0.1)]
     result,F1,F2=nsga.main()
     # print(result)
