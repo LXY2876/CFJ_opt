@@ -12,16 +12,17 @@ from numpy import pi
 #First function to optimize
 
 class NSGA2():
-    def __init__(self,func1,func2,constraint,flag):
+    def __init__(self,func1,func2,func3,constraint,flag):
     #Initialization
 
         self.min_x=[-55,-55]
         self.max_x=[55,55]
         self.flag=flag
-        self.pop_size=100
-        self.max_gen=200
+        self.pop_size=120
+        self.max_gen=300
         self.obj1=func1
         self.obj2=func2
+        self.onj3=func3
         self.constraint=constraint
         self.bounds=[(-55,55),(-55,55)]
         self.tour_size=2
@@ -130,13 +131,25 @@ class NSGA2():
         distance[index_front[0]] = 4444
         distance[index_front[lenth-1]] = 4444            
         for k in range(1,lenth-1):
-            distance[index_front[k]] = distance[index_front[k]]+ (values1[sorted1[k+1]] - values1[sorted1[k-1]])/(max(values1)-min(values1))
+            denominator = max(values1) - min(values1)
+            if abs(denominator) < 1e-6:  # 用一个小的阈值来判断分母是否接近零
+            # 分母太小，可以选择跳过这次计算或采取其他措施
+                pass
+            else:
+                distance[index_front[k]] = distance[index_front[k]] + (values1[sorted1[k+1]] - values1[sorted1[k-1]]) / denominator
+            # distance[index_front[k]] = distance[index_front[k]]+ (values1[sorted1[k+1]] - values1[sorted1[k-1]])/(max(values1)-min(values1))
             # print("/n")
             # print("k:",k)
             # print("distance[{}]".format(k),distance[k])
         index_front.reverse()
         for k in range(1,lenth-1):
-            distance[index_front[k]] = distance[index_front[k]]+ (values2[sorted2[k+1]] - values2[sorted2[k-1]])/(max(values2)-min(values2))
+            denominator = max(values2) - min(values2)
+            if abs(denominator) < 1e-6:  # 用一个小的阈值来判断分母是否接近零
+                # 分母太小，可以选择跳过这次计算或采取其他措施
+                pass
+            else:
+                distance[index_front[k]] = distance[index_front[k]] + (values2[sorted2[k+1]] - values2[sorted2[k-1]]) / denominator
+            # distance[index_front[k]] = distance[index_front[k]]+ (values2[sorted2[k+1]] - values2[sorted2[k-1]])/(max(values2)-min(values2))
         
         return distance
     
@@ -279,11 +292,13 @@ class NSGA2():
         while(gen_no<self.max_gen):
             print('\n')
             print('gen_no:迭代次数',gen_no)
-            function1_values = [self.obj1(solution[i])for i in range(0,self.pop_size)]
+            # function1_values = [self.obj1(solution[i])for i in range(0,self.pop_size)]
             
-            function2_values = [self.obj2(solution[i])for i in range(0,self.pop_size)]
+            # function2_values = [self.obj2(solution[i])for i in range(0,self.pop_size)]
             
-            CV_value=[self.constraint(solution[i])for i in range(0,self.pop_size)]
+            # CV_value=[self.constraint(solution[i])for i in range(0,self.pop_size)]
+
+            function1_values,function2_values,CV_value=self.onj3(solution)
             # print('function1_values:',function1_values)
             # print('function2_values:', function2_values)
             non_dominated_sorted_solution = self.fast_non_dominated_sort(function1_values[:],function2_values[:],CV_value[:])
@@ -308,9 +323,10 @@ class NSGA2():
             solution2=np.vstack((solution,self.cross_mutation(solution,1,1,20,20)))
             # print(cross_mutation(solution,1,0.5,0.5,0.5))
             # print('solution2',solution2)
-            function1_values2 = [self.obj1(solution2[i])for i in range(0,2*self.pop_size)]
-            function2_values2 = [self.obj2(solution2[i])for i in range(0,2*self.pop_size)]
-            CV_value=[self.constraint(solution2[i])for i in range(0,2*self.pop_size)]
+            # function1_values2 = [self.obj1(solution2[i])for i in range(0,2*self.pop_size)]
+            # function2_values2 = [self.obj2(solution2[i])for i in range(0,2*self.pop_size)]
+            # CV_value=[self.constraint(solution2[i])for i in range(0,2*self.pop_size)]
+            function1_values2,function2_values2,CV_value=self.onj3(solution2)
             non_dominated_sorted_solution2 = self.fast_non_dominated_sort(function1_values2[:],function2_values2[:],CV_value[:])  #2*pop_size
             # print('non_dominated_sorted_solution2', non_dominated_sorted_solution2)
             # print("\n")
@@ -354,9 +370,9 @@ class NSGA2():
             infeasible_value2=[-1*function2_values2[i] for i in infeasible_index]
             front_value1=[-1*function1_values2[i] for i in non_dominated_sorted_solution2[0]]
             front_value2=[-1*function2_values2[i] for i in non_dominated_sorted_solution2[0]]
-            plt.scatter(feasible_value1,feasible_value2, marker=".",color=(0.2,0.5,gen_no/self.max_gen))
+            # plt.scatter(feasible_value1,feasible_value2, marker=".",color=(0.2,0.5,gen_no/self.max_gen))
             # plt.scatter(infeasible_value1,infeasible_value2, marker="*",color='k')
-            plt.scatter(front_value1,front_value2, marker="x",color=(0.2,0.5,gen_no/self.max_gen))
+            # plt.scatter(front_value1,front_value2, marker="x",color=(0.2,0.5,gen_no/self.max_gen))
             
             # plt.show()
         # Lets plot the final front now
