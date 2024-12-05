@@ -1,94 +1,173 @@
 clear all;
-alpha0=0;
-%  [Pos,Cl_dis]=read_lift_dis("lift_interval_10");
- Cl_dis = [2.723027e+01, 2.722310e+01, 2.720238e+01, 2.716807e+01, 2.711913e+01, 2.705459e+01, 2.697266e+01, 2.687125e+01, 2.674755e+01, 2.659755e+01, 2.641710e+01, 2.619901e+01, 2.593162e+01, 2.560213e+01, 2.519707e+01, 2.469378e+01, 2.406951e+01, 2.326630e+01, 2.219520e+01, 2.063614e+01, 1.830834e+01, 1.506318e+01]/(0.5*1.225*400*0.3);
-N=length(Cl_dis);
- 
- Pos=linspace(0,1.45,N);
-center=(Pos(1:end-1)+Pos(2:end))/2;
-len=center(2:end)-center(1:end-1);
-len=[center(1),len,1.5-center(end)];
-plot(Pos,Cl_dis);
-hold on;
- massrate=0.12;
-Ai=40/180*pi;
-As=50/180*pi;
-Bi=0.003;
-Bs=0.007;
-Gama=0;
-epsilon=2/3;
-vinj=massrate/1.225/Bi;
-vsuc=massrate/1.225/Bs;
-[Xl, Yl] = meshgrid(4:-2:-4, [0.03,0.05,0.06,0.07,0.08,0.09,0.1,0.11,0.12,0.135,0.15,0.16,0.17,0.18,0.2,0.22,0.25,0.275,0.3]); 
-[Xd, Yd] = meshgrid(4:-2:-4, [0.05,0.1,0.15,0.2]); 
-cl_map=table2array(readtable('cl_map_without_jet.xlsx'));
-cd_map=table2array(readtable('cd_map_without_jet.xlsx'));
-cdp_map=table2array(readtable('cdp_map.xlsx'));
-cdf_map=table2array(readtable('cdf_map.xlsx'));
-Fx_map=table2array(readtable('jetFx_map.xlsx'));
-Fy_map=table2array(readtable('jetFy_map.xlsx'));
-Cd_dis=zeros(N,1);
-new_Cl_dis=zeros(N,1);
-new_Cd_dis=zeros(N,1);
-Alpha_i=zeros(N,1);
-for i=1:N
-    cl=Cl_dis(i)/(cos(Gama)^2);
-    alpha_i=0;
-    last_alpha_i=0;
-    cd_eff=0;   
-    while alpha_i==0 || abs(last_alpha_i-alpha_i)>0.001
-        last_alpha_i=alpha_i;
-        cl_eff=cl*(cos(alpha_i))+cd_eff*tan(alpha_i);
-        [alpha_eff,cd_eff]=search_in_map(cl_eff);
-        alpha_i=alpha0/cos(Gama)-alpha_eff;      
-    end
-    Alpha_i(i)=alpha_i;
-    Cd_dis(i)=cd_eff/cos(alpha_i)+cl_eff*tan(alpha_i)/cos(alpha_i);
+allResults=[];
+massrateValues = [0.05,0.1,0.12, 0.15,0.2,0.22,]; % 多个质量流量值示例
+induced_Angle=[];
+Pos=[];
+% [Pos,induced_Angle]=induced_angle_data_from_excel('induce_angle_xflr5_taper.csv');
+N=(length(Pos)+1)/2;
+
+for i = 1:length(massrateValues)
+    currentResult = saveAeroDataToExcel(massrateValues(i),-Pos(N:-1:1)',induced_Angle(N:-1:1));
+    allResults = [allResults; currentResult]; % 添加到总的结果矩阵中
 end
-DeltaCl=zeros(round(epsilon*length(Cl_dis)),1);
-DeltaCd=zeros(round(epsilon*length(Cl_dis)),1);
-DeltaCd_p=zeros(round(epsilon*length(Cl_dis)),1);
-DeltaCd_f=zeros(round(epsilon*length(Cl_dis)),1);
-Cl=0;
-Cd=0;
-for i=1:length(Cl_dis)
-    if Pos(i)<epsilon*1.5
+resultTable = array2table(allResults, 'VariableNames', {'massrate', 'Cl_no_jet', 'Cd_no_jet', 'Cl', 'Cd','DeltaP'});
+writetable(resultTable, 'all_results.xlsx', 'Sheet', 'Sheet1');
+[Pos,induced_Angle]=induced_angle_data_from_excel('induce_angle_xflr5_taper.csv');
+function result=saveAeroDataToExcel(real_massrate,Pos,induced_Angle)
+    shapes= size(induced_Angle);
+    if shapes(2)==0
+
+    %矩阵机翼CFD
+%     Cl_dis = [2.722508e+01, 2.720927e+01, 2.718091e+01, 2.713953e+01, 2.708415e+01, 2.701388e+01, 2.692510e+01, 2.681580e+01, 2.668348e+01, 2.652493e+01, 2.633479e+01, 2.610681e+01, 2.583289e+01, 2.550113e+01, 2.509571e+01, 2.458322e+01, 2.395280e+01, 2.314244e+01, 2.205922e+01, 2.051154e+01, 1.820481e+01, 1.506318e+01];
+    %梯形机翼
+        Cl_dis =[2.454429e+01, 2.435579e+01, 2.405373e+01, 2.367682e+01, 2.324530e+01, 2.276954e+01, 2.225642e+01, 2.171249e+01, 2.114284e+01, 2.055110e+01, 1.993400e+01, 1.929520e+01, 1.863417e+01, 1.795095e+01, 1.725436e+01, 1.648221e+01, 1.570298e+01, 1.486106e+01, 1.390811e+01, 1.278376e+01, 1.131019e+01, 9.089243e+00];
+        Pos=linspace(0.05,1.45,22);
+        
+    end
+    alpha0=0;
+    N=length(Pos);
+    %机翼参数
+    taper=0.5;
+%     Gama=0/180*pi;
+    Gama=7.9696/180*pi;
+    epsilon=2/3;
+    % Gama=0;
+    b=1.5;%半展长
+    cr=0.3;%根弦长
+    ct=cr*taper;
+    c_ref=2/3*cr*(1+taper^2/(1+taper));%气动弦长
+    S=b*cr*(1+taper)/2;
+    S_cfj=b*epsilon*cr*(1+taper)/2;
  
-        DeltaCl(i)=interp2(Xl, Yl, cl_map, (alpha0/cos(Gama)-Alpha_i(i))/pi*180, massrate, 'linear');
-        DeltaCd_p(i)=interp2(Xd, Yd, cdp_map, (alpha0/cos(Gama)-Alpha_i(i))/pi*180, massrate, 'linear');
-        DeltaCd_f(i)=interp2(Xd, Yd, cdf_map, (alpha0/cos(Gama)-Alpha_i(i))/pi*180, massrate, 'linear');
-        DeltaCd(i)=DeltaCd_p(i)+DeltaCd_f(i);
-        %垂直1/4弦长处
-        new_Cl_dis(i)=DeltaCl(i)/cos(Alpha_i(i))-DeltaCd(i)*tan(Alpha_i(i))/cos(Alpha_i(i));
-        new_Cd_dis(i)=DeltaCd(i)/cos(Alpha_i(i))+DeltaCl(i)*tan(Alpha_i(i))/cos(Alpha_i(i));
-%         new_Cl_dis(i)=new_Cl_dis(i)-interp2(X,Y,Fy_map,(alpha0)/pi*180,massrate,'linear')/(0.5*1.225*400*0.3);
-%         new_Cd_dis(i)=new_Cd_dis(i)-interp2(X,Y,Fx_map,(alpha0)/pi*180,massrate,'linear')/(0.5*1.225*400*0.3);
-%         new_Cl_dis(i)=(DeltaCd_p(i)*cos(Gama)^3+DeltaCd_f(i))/cos(Alpha_i(i))+DeltaCl(i)*tan(Alpha_i(i))/cos(Alpha_i(i));
+
+    divide_point=(Pos(1:end-1)+Pos(2:end))/2;
+    delta_b=divide_point(2:end)-divide_point(1:end-1);
+    delta_b=[divide_point(1),delta_b,1.5-divide_point(end)];
+    C=cr-Pos/1.5*cr*(1-taper);
+    if shapes(2)==0
+        Cl_dis=Cl_dis./C/(0.5*1.225*400);
+    end
+    
+    delta_s=C.*delta_b;
+
+    Ai=40/180*pi;
+    As=50/180*pi;
+    inj_loc=0.0761;
+    suc_loc=0.8107;
+    Bi_c=0.01;
+    Bs_c=0.01*7/3;
+    Bi=(Bi_c*cr+Bi_c*cr*(1-(1-taper)*epsilon))*b*epsilon/2;
+    Bs=(Bs_c*cr+Bs_c*cr*(1-(1-taper)*epsilon))*b*epsilon/2;
+    Angle_of_inj=atan((b*tan(Gama)+(ct-cr)*inj_loc)/b);
+    Angle_of_suc=atan((b*tan(Gama)+(ct-cr)*suc_loc)/b);
+    
+    massrate=real_massrate*0.003/Bi;
+    vinj=real_massrate/1.225/(Bi);
+    Cmiu=real_massrate*vinj/(0.5*1.225*400*S_cfj);
+    vsuc=real_massrate/1.225/(Bs);
+    [Xl, Yl] = meshgrid(4:-2:-4, [0.03,0.05,0.06,0.07,0.08,0.09,0.1,0.11,0.12,0.135,0.15,0.16,0.17,0.18,0.2,0.22,0.25,0.275,0.3]); 
+    [Xd, Yd] = meshgrid(4:-2:-4, [0.03,0.05,0.1,0.15,0.2,0.25,0.275]); 
+    cl_map=table2array(readtable('cl_map_without_jet.xlsx'));
+    cd_map=table2array(readtable('cd_map_without_jet.xlsx'));
+    cdp_map=table2array(readtable('cdp_map.xlsx'));
+    cdf_map=table2array(readtable('cdf_map.xlsx'));
+    Fx_map=table2array(readtable('jetFx_map.xlsx'));
+    Fy_map=table2array(readtable('jetFy_map.xlsx'));
+    pinj_map=table2array(readtable('pinj_map.xlsx'));
+    psuc_map=table2array(readtable('psuc_map.xlsx'));
+    Ptinj_map=table2array(readtable('Ptinj_map.xlsx'));
+    Ptsuc_map=table2array(readtable('Ptsuc_map.xlsx'));
+    alpha_map=[-4,-2,0,2,4];
+    Cl_map=[0.104,0.296,0.485,0.667234041,0.837096513];
+    
+    Cdp_map=[0.007292155,0.007278948,0.008104288,0.009828387,0.012613109];
+    Cdf_map=[0.010385784,0.010660165,0.010845842,0.010943995,0.010955707];
+    Cd_dis=zeros(N,1);
+    new_Cl_dis=zeros(N,1);
+    new_Cd_dis=zeros(N,1);
+    Alpha_i=zeros(N,1);
+    Cd_p=zeros(N,1);
+    Cd_f=zeros(N,1);
+    if shapes(2)==0
+        for i=1:N
+            cl=Cl_dis(i)/(cos(Gama)^2);
+            alpha_i=0;
+            last_alpha_i=0;
+            cd_eff=0;   
+
+            while alpha_i==0 || abs(last_alpha_i-alpha_i)>0.001
+                last_alpha_i=alpha_i;
+                cl_eff=cl*(cos(alpha_i))+cd_eff*tan(alpha_i);
+                [alpha_eff,cd_eff]=search_in_map(cl_eff);
+                alpha_i=alpha0/cos(Gama)-alpha_eff;  
+        %         cd_eff=cdp_eff+cdf_eff;
+            end
+            Alpha_i(i)=alpha_i;
+        end
     else
-        new_Cl_dis(i)=Cl_dis(i);
-        new_Cd_dis(i)=Cd_dis(i);
-%         Cl=Cl+Cl_dis(i);
-%         Cd=Cd+Cd_dis(i);
+        Alpha_i=-induced_Angle/180*pi;
     end
-
-end
-Cl=len*new_Cl_dis/1.5;
-Cd=len*new_Cd_dis/1.5;
-Cl=Cl-interp2(Xl,Yl,Fy_map,(alpha0)/pi*180,massrate,'linear')/(0.5*1.225*400*0.45);
-Cd=Cd-interp2(Xl,Yl,Fx_map,(alpha0)/pi*180,massrate,'linear')/(0.5*1.225*400*0.45);
-plot(Pos,new_Cl_dis);
-
-cfd_lift= [4.980687e+01, 4.995161e+01, 5.026819e+01, 5.063544e+01, 5.082359e+01, 5.061597e+01, 5.004650e+01, 4.908667e+01, 4.764337e+01, 4.571406e+01, 4.341806e+01, 4.257368e+01, 4.219295e+01, 4.099776e+01, 3.791629e+01, 3.059722e+01, 2.846992e+01, 2.671473e+01, 2.493405e+01, 2.286124e+01, 2.033951e+01, 1.729018e+01]/(0.5*1.225*400*0.3);
-plot(Pos,abs(cfd_lift));
+    DeltaCl=zeros(N,1);
+    DeltaCd=zeros(N,1);
+    DeltaCd_p=zeros(N,1);
+    DeltaCd_f=zeros(N,1);
+    pinj=zeros(N,1);
+    psuc=zeros(N,1);
+    ptinj=zeros(N,1);
+    ptsuc=zeros(N,1);
+    for i=1:length(Pos)
+        if Pos(i)<epsilon*1.5
+     
+            DeltaCl(i)=interp2(Xl, Yl, cl_map, (alpha0/cos(Gama)-Alpha_i(i))/pi*180, massrate*cos(Alpha_i(i)), 'linear');
+            DeltaCd_p(i)=interp2(Xd, Yd, cdp_map, (alpha0/cos(Gama)-Alpha_i(i))/pi*180, massrate*cos(Alpha_i(i)), 'linear');
+            DeltaCd_f(i)=interp2(Xd, Yd, cdf_map, (alpha0/cos(Gama)-Alpha_i(i))/pi*180, massrate*cos(Alpha_i(i)), 'linear');
+            DeltaCd(i)=DeltaCd_p(i)+DeltaCd_f(i);
+            %垂直1/4弦长处
+            new_Cl_dis(i)=DeltaCl(i)/cos(Alpha_i(i))-DeltaCd(i)*tan(Alpha_i(i))/cos(Alpha_i(i));
+            new_Cd_dis(i)=DeltaCd(i)/cos(Alpha_i(i))+DeltaCl(i)*tan(Alpha_i(i))/cos(Alpha_i(i));
+            new_Cd_dis(i)=(DeltaCd_p(i)*cos(Gama)^3+DeltaCd_f(i))/cos(Alpha_i(i))+DeltaCl(i)*tan(Alpha_i(i))/cos(Alpha_i(i))*cos(Gama)^3;
+            pinj(i)=interp2(Xl, Yl, pinj_map, (alpha0/cos(Gama)-Alpha_i(i))/pi*180, massrate*cos(Alpha_i(i))*cos(Gama-Angle_of_inj), 'linear');
+            psuc(i)=interp2(Xl, Yl, psuc_map, (alpha0/cos(Gama)-Alpha_i(i))/pi*180, massrate*cos(Alpha_i(i))*cos(Gama-Angle_of_suc), 'linear');
+            ptinj(i)=interp2(Xl, Yl, Ptinj_map, (alpha0/cos(Gama)-Alpha_i(i))/pi*180, massrate*cos(Alpha_i(i))*cos(Gama-Angle_of_inj), 'linear');
+            ptsuc(i)=interp2(Xl, Yl, Ptsuc_map, (alpha0/cos(Gama)-Alpha_i(i))/pi*180, massrate*cos(Alpha_i(i))*cos(Gama-Angle_of_suc), 'linear');
+            Cd_p(i)=DeltaCd_p(i)*cos(Gama)^3/cos(Alpha_i(i));
+            Cd_f(i)=DeltaCd_f(i)/cos(Alpha_i(i));
+        else
+            Cl_eff=interp1(alpha_map,Cl_map,(alpha0/cos(Gama)-Alpha_i(i))/pi*180, 'linear');
+            Cdp_eff=interp1(alpha_map,Cdp_map,(alpha0/cos(Gama)-Alpha_i(i))/pi*180, 'linear');
+            Cdf_eff=interp1(alpha_map,Cdf_map,(alpha0/cos(Gama)-Alpha_i(i))/pi*180, 'linear');
+            new_Cl_dis(i)=Cl_eff/cos(Alpha_i(i))-(Cdp_eff+Cdf_eff)*tan(Alpha_i(i))/cos(Alpha_i(i));
+            new_Cd_dis(i)=(Cdp_eff+Cdf_eff*cos(Gama)^3)/cos(Alpha_i(i))+Cl_eff*tan(Alpha_i(i))/cos(Alpha_i(i))*cos(Gama)^3;
+    %         Cl=Cl+Cl_dis(i);
+    %         Cd=Cd+Cd_dis(i);
+        end
+    
+    end
+    Cd_p=delta_s*Cd_p/S;
+    Cd_f=delta_s*Cd_f/S;
+    Cl_no_jet=delta_s*new_Cl_dis/S;
+    Cd_no_jet=delta_s*new_Cd_dis/S;
+    bi=C*Bi_c.*delta_b;
+    bs=C*Bs_c.*delta_b;
+%     fprintf("Cl=%d,Cd=%d\n",Cl,Cd);
+     
+    DeltaP=bs*(ptinj-ptsuc)/Bs;
+    fj_x=((vinj)*real_massrate)*cos(Ai-alpha0)+bi*pinj*cos(Ai-alpha0);
+    fs_x=-(-(vsuc)*real_massrate)*cos(As+alpha0)-bs*psuc*cos(As+alpha0);
+    fj_y=((vinj)*real_massrate)*sin(Ai-alpha0)+bi*pinj*sin(Ai-alpha0);
+    fs_y=(-(vsuc)*real_massrate)*sin(As+alpha0)+bs*psuc*sin(As+alpha0);
+    % Cl=Cl-interp2(Xl,Yl,Fy_map,(alpha0)/pi*180,massrate,'linear')/(0.5*1.225*400*S);
+    Cl=Cl_no_jet-fj_y/(0.5*1.225*400*S)-fs_y/(0.5*1.225*400*S);
+    Cd=Cd_no_jet-fj_x/(0.5*1.225*400*S)*cos(Angle_of_inj)-fs_x/(0.5*1.225*400*S)*cos(Angle_of_suc);
+    % Cd=Cd-interp2(Xl,Yl,Fx_map,(alpha0)/pi*180,massrate,'linear')/(0.5*1.225*400*S);
+%     fprintf("Cl=%d,Cd=%d\n",Cl,Cd);
+    result = [real_massrate,Cl_no_jet, Cd_no_jet, Cl, Cd,DeltaP];
  
-
-% [Pos,Cl_dis]=read_lift_dis("mass_rate_0.1_alpha_0");
-% sum(DeltaCl)*round(epsilon*length(Cl_dis))/length(Cl_dis)
-% sum(DeltaCd)*round(epsilon*length(Cl_dis))/length(Cl_dis)
+end
  
 function [Alpha_eff,Cd_p,Cd_f]=search_in_map(Cl_eff)
     Cl_map=[0.104,0.296,0.485,0.667234041,0.837096513];
-    alpha_map=[-4,-2,0]/180*pi;
+    alpha_map=[-4,-2,0,2,4]/180*pi;
     Cdp_map=[0.007292155,0.007278948,0.008104288,0.009828387,0.012613109];
     Cdf_map=[0.010385784,0.010660165,0.010845842,0.010943995,0.010955707];
     N=length(Cl_map);
@@ -96,6 +175,20 @@ function [Alpha_eff,Cd_p,Cd_f]=search_in_map(Cl_eff)
         if Cl_eff<Cl_map(i)
             Cd_p=Cdp_map(i-1)+(Cl_eff-Cl_map(i-1))/(Cl_map(i)-Cl_map(i-1))*(Cdp_map(i)-Cdp_map(i-1));
             Cd_f=Cdf_map(i-1)+(Cl_eff-Cl_map(i-1))/(Cl_map(i)-Cl_map(i-1))*(Cdf_map(i)-Cdf_map(i-1));
+            Alpha_eff=alpha_map(i-1)+(Cl_eff-Cl_map(i-1))/(Cl_map(i)-Cl_map(i-1))*(alpha_map(i)-alpha_map(i-1));
+            break;
+        end
+    end
+end
+function [Alpha_eff,Cd_eff]=search_in_map_new(Cl_eff)
+    Cl_map= [-0.3649565, -0.2688963, -0.1704998, -0.07037165, 0.03255308, 0.1349339, 0.2360541, 0.3365605, 0.4368884, 0.5371665, 0.6378259, 0.7388124, 0.8333122, 0.9560912, 1.04329, 1.134505, 1.225301, 1.31345, 1.396846, 1.474257, 1.544096];
+    alpha_map=linspace(-10,10,21)/180*pi;
+    Cd_map=[0.02028769,0.01807094,0.0165518,0.01519432,0.01452551,0.0137173,0.01319561,0.01284688,0.01282076,0.01281368,0.01282134,0.0128899,0.0125036,0.0128668,0.01367019,0.01453017,0.015516,0.01674011,0.01803182,0.01965492,0.0215665];
+    N=length(Cl_map);
+    for i=1:N
+        if Cl_eff<Cl_map(i)
+            Cd_eff=Cd_map(i-1)+(Cl_eff-Cl_map(i-1))/(Cl_map(i)-Cl_map(i-1))*(Cd_map(i)-Cd_map(i-1));
+           
             Alpha_eff=alpha_map(i-1)+(Cl_eff-Cl_map(i-1))/(Cl_map(i)-Cl_map(i-1))*(alpha_map(i)-alpha_map(i-1));
             break;
         end
@@ -150,5 +243,15 @@ function [pos,local_lift]=read_lift_dis(filename)
     pos=data(2:end,1);
 end
 
-
+function [pos, induced_angle] = induced_angle_data_from_excel(filename)
+    % 从Excel文件的第二行开始读取数据
+     
+    raw=readmatrix(filename);
+    % 提取从第二行开始的两列数据
+    data = raw(2:end, :);  % 从第二行开始
+    
+    % 将数据转化为数值格式并提取两列
+    pos = data(:, 1);  % 第一列
+    induced_angle = data(:, 2);  % 第二列
+end
 
